@@ -35,14 +35,20 @@ function writeDB(data) {
 }
 
 app.post('/api/register', (req, res) => {
-  const { name, color, emoji } = req.body
+  const { name, color, emoji, drunkLevel } = req.body
   if (!name) return res.json({ message: 'Name is required' })
 
   const db = readDB()
   const exists = db.people.find(p => p.name.toLowerCase() === name.toLowerCase())
-  if (exists) return res.json({ message: `Welcome back, ${name}!`, id: exists.id, color: exists.color, emoji: exists.emoji })
+  if (exists) {
+    if (drunkLevel !== undefined && drunkLevel !== null) {
+      exists.drunkLevel = drunkLevel
+      writeDB(db)
+    }
+    return res.json({ message: `Welcome back, ${name}!`, id: exists.id, color: exists.color, emoji: exists.emoji, drunkLevel: exists.drunkLevel ?? null })
+  }
 
-  const newPerson = { id: Date.now().toString(), name, color: color || '#4a90d9', emoji: emoji || '', knows: [] }
+  const newPerson = { id: Date.now().toString(), name, color: color || '#4a90d9', emoji: emoji || '', drunkLevel: drunkLevel ?? null, knows: [] }
   db.people.push(newPerson)
   writeDB(db)
 
@@ -50,12 +56,13 @@ app.post('/api/register', (req, res) => {
 })
 
 app.patch('/api/people/:id', (req, res) => {
-  const { color, emoji } = req.body
+  const { color, emoji, drunkLevel } = req.body
   const db = readDB()
   const person = db.people.find(p => p.id === req.params.id)
   if (!person) return res.status(404).json({ error: 'Not found' })
   if (color) person.color = color
   if (emoji !== undefined) person.emoji = emoji
+  if (drunkLevel !== undefined) person.drunkLevel = drunkLevel
   writeDB(db)
   res.json({ ok: true })
 })

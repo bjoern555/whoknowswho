@@ -55,15 +55,19 @@
       background: #e74c3c; border: 2px solid #1a1a2e;
     }
     #chatPanel {
-      position: fixed; bottom: 90px; right: 24px; z-index: 20;
-      width: 320px; height: 480px;
-      background: #16213e; border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 100vh; height: 100dvh;
+      z-index: 30; background: #16213e;
       display: none; flex-direction: column; overflow: hidden;
     }
     #chatHeader {
       padding: 14px 16px; font-weight: bold; font-size: 15px;
       border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;
+      display: flex; align-items: center; gap: 12px;
+    }
+    #chatBack {
+      background: none; border: none; color: white;
+      font-size: 22px; cursor: pointer; padding: 0; line-height: 1;
     }
     #chatMessages {
       flex: 1; overflow-y: auto; padding: 12px;
@@ -78,7 +82,7 @@
     #chatText {
       flex: 1; padding: 8px 12px; border-radius: 20px;
       border: none; background: #2a2a4a; color: white;
-      font-size: 14px; outline: none;
+      font-size: 16px; outline: none;
     }
     #chatText::placeholder { color: #777; }
     #chatSendBtn {
@@ -126,7 +130,10 @@
     <span id="chatBadge"></span>
   </button>
   <div id="chatPanel">
-    <div id="chatHeader">💬 Chat</div>
+    <div id="chatHeader">
+      <button id="chatBack" onclick="toggleChat()">&#x2190;</button>
+      💬 Chat
+    </div>
     <div id="chatMessages"></div>
     <div id="chatInputRow">
       <input id="chatText" placeholder="Message…" maxlength="500" />
@@ -154,14 +161,37 @@
     let allMessages = []
     let latestPeople = []
 
+    const chatPanel = document.getElementById('chatPanel')
+
+    function setChatSize() {
+      const vv = window.visualViewport
+      chatPanel.style.height = (vv ? vv.height : window.innerHeight) + 'px'
+      chatPanel.style.top = (vv ? vv.offsetTop : 0) + 'px'
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => { if (chatOpen) { setChatSize(); scrollChatToBottom() } })
+      window.visualViewport.addEventListener('scroll', () => { if (chatOpen) setChatSize() })
+    }
+
     function toggleChat() {
       chatOpen = !chatOpen
-      document.getElementById('chatPanel').style.display = chatOpen ? 'flex' : 'none'
       if (chatOpen) {
+        setChatSize()
+        chatPanel.style.display = 'flex'
+        document.body.style.overflow = 'hidden'
+        document.body.style.position = 'fixed'
+        document.body.style.width = '100%'
         lastSeenCount = allMessages.length
         document.getElementById('chatBadge').style.display = 'none'
         renderMessages(allMessages)
-        document.getElementById('chatText').focus()
+      } else {
+        chatPanel.style.display = 'none'
+        chatPanel.style.height = ''
+        chatPanel.style.top = ''
+        document.body.style.overflow = ''
+        document.body.style.position = ''
+        document.body.style.width = ''
       }
     }
 
@@ -269,7 +299,6 @@
         return {
           id: p.id,
           label,
-          title: `${label}\n${connectionCount[p.id]} connection${connectionCount[p.id] !== 1 ? 's' : ''}`,
           color: { background: bg, border: bg, highlight: { background: bg, border: '#fff' } },
           font: { color: lightBg ? '#333' : 'white', size: 14 }
         }
@@ -295,7 +324,7 @@
         { nodes: nodeSet, edges: edgeSet },
         {
           physics: { stabilization: false, barnesHut: { gravitationalConstant: -3000 } },
-          interaction: { hover: true, tooltipDelay: 100 }
+          interaction: { hover: false }
         }
       )
 
@@ -336,13 +365,13 @@
         if (params.nodes.length === 0) { tooltip.style.display = 'none'; return }
         const nodeId = params.nodes[0]
         const person = currentPeople.find(p => p.id === nodeId)
-        const connected = currentPeople.filter(p =>
+        const count = currentPeople.filter(p =>
           p.id !== nodeId && (person.knows.includes(p.id) || p.knows.includes(nodeId))
-        ).map(p => p.name)
+        ).length
         tooltip.style.display = 'block'
         tooltip.style.left = params.event.srcEvent.clientX + 15 + 'px'
         tooltip.style.top = params.event.srcEvent.clientY + 15 + 'px'
-        tooltip.innerHTML = `<strong>${person.name}</strong><br>Connected to: ${connected.length ? connected.join(', ') : 'nobody yet'}`
+        tooltip.innerHTML = `<strong>${person.name}</strong>${person.drunkLevel != null ? '<br>🍻 ' + person.drunkLevel + '/10' : ''}<br>${count} connection${count !== 1 ? 's' : ''}`
       })
 
       setInterval(async () => {

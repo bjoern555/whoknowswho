@@ -71,7 +71,14 @@
 
     <div class="picker-label">Pick an emoji <span style="font-weight:normal;color:#aaa">(optional)</span></div>
     <div class="emoji-grid" id="regEmojiPicker"></div>
-    <br>
+
+    <div class="picker-label">Wie betrunke wirsch hütt si?</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <input id="regDrunkLevel" type="range" min="0" max="10" value="5" style="width:180px"
+        oninput="document.getElementById('regDrunkVal').textContent=this.value" />
+      <span id="regDrunkVal" style="font-size:20px;font-weight:bold;min-width:24px">5</span>
+    </div>
+    <br><br>
     <button class="primary" onclick="register()">Join &rarr;</button>
   </div>
 
@@ -86,6 +93,12 @@
       <div class="color-row" id="editColorPicker"></div>
       <div class="picker-label">Emoji</div>
       <div class="emoji-grid" id="editEmojiPicker"></div>
+      <div class="picker-label">Wie betrunke wirsch hütt si?</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <input id="editDrunkLevel" type="range" min="0" max="10" value="5" style="width:180px"
+          oninput="document.getElementById('editDrunkVal').textContent=this.value" />
+        <span id="editDrunkVal" style="font-size:20px;font-weight:bold;min-width:24px">5</span>
+      </div>
       <br>
       <button class="primary" onclick="saveProfile()">Save</button>
     </div>
@@ -119,10 +132,11 @@
     ]
     const EMOJIS = ['🎉','😊','😎','🔥','💎','🌟','🍕','🎸','🦄','🐱','🚀','🌈','🍺','👑','🦊','💪','🎭','🤗']
 
-    let myId    = localStorage.getItem('myId')
-    let myName  = localStorage.getItem('myName')
-    let myColor = localStorage.getItem('myColor') || '#4a90d9'
-    let myEmoji = localStorage.getItem('myEmoji') || ''
+    let myId         = localStorage.getItem('myId')
+    let myName       = localStorage.getItem('myName')
+    let myColor      = localStorage.getItem('myColor') || '#4a90d9'
+    let myEmoji      = localStorage.getItem('myEmoji') || ''
+    let myDrunkLevel = localStorage.getItem('myDrunkLevel') !== null ? Number(localStorage.getItem('myDrunkLevel')) : 5
 
     let regColor = myColor
     let regEmoji = myEmoji
@@ -209,17 +223,19 @@
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, color: regColor, emoji: regEmoji })
+        body: JSON.stringify({ name, color: regColor, emoji: regEmoji, drunkLevel: Number(document.getElementById('regDrunkLevel').value) })
       })
       const data = await res.json()
-      myId    = data.id
-      myName  = name
-      myColor = data.color || regColor
-      myEmoji = data.emoji ?? regEmoji
-      localStorage.setItem('myId',    myId)
-      localStorage.setItem('myName',  myName)
-      localStorage.setItem('myColor', myColor)
-      localStorage.setItem('myEmoji', myEmoji)
+      myId         = data.id
+      myName       = name
+      myColor      = data.color || regColor
+      myEmoji      = data.emoji ?? regEmoji
+      myDrunkLevel = Number(document.getElementById('regDrunkLevel').value)
+      localStorage.setItem('myId',         myId)
+      localStorage.setItem('myName',       myName)
+      localStorage.setItem('myColor',      myColor)
+      localStorage.setItem('myEmoji',      myEmoji)
+      localStorage.setItem('myDrunkLevel', myDrunkLevel)
       await showMain()
     }
 
@@ -229,14 +245,16 @@
     }
 
     async function saveProfile() {
-      myColor = editColor
-      myEmoji = editEmoji
-      localStorage.setItem('myColor', myColor)
-      localStorage.setItem('myEmoji', myEmoji)
+      myColor      = editColor
+      myEmoji      = editEmoji
+      myDrunkLevel = Number(document.getElementById('editDrunkLevel').value)
+      localStorage.setItem('myColor',      myColor)
+      localStorage.setItem('myEmoji',      myEmoji)
+      localStorage.setItem('myDrunkLevel', myDrunkLevel)
       await fetch('/api/people/' + myId, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ color: myColor, emoji: myEmoji })
+        body: JSON.stringify({ color: myColor, emoji: myEmoji, drunkLevel: myDrunkLevel })
       })
       updateBadge()
       document.getElementById('editSection').style.display = 'none'
@@ -249,6 +267,8 @@
 
       editColor = myColor
       editEmoji = myEmoji
+      document.getElementById('editDrunkLevel').value = myDrunkLevel
+      document.getElementById('editDrunkVal').textContent = myDrunkLevel
 
       const res  = await fetch('/api/people')
       const data = await res.json()
