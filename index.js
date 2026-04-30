@@ -1,6 +1,6 @@
 const express = require('express')
-const fs = require('fs')
-const os = require('os')
+const fs = require('node:fs')
+const os = require('node:os')
 const app = express()
 
 function getLocalIP() {
@@ -10,7 +10,6 @@ function getLocalIP() {
       if (iface.family === 'IPv4' && !iface.internal) all.push(iface.address)
     }
   }
-  // prefer home/office WiFi ranges over VM/Docker subnets
   return all.find(ip => ip.startsWith('192.168.1.'))
       || all.find(ip => ip.startsWith('192.168.'))
       || all.find(ip => ip.startsWith('10.'))
@@ -24,9 +23,10 @@ app.use(express.json())
 const DB_FILE = 'db.json'
 
 function readDB() {
-  if (!fs.existsSync(DB_FILE)) return { people: [], activities: [] }
+  if (!fs.existsSync(DB_FILE)) return { people: [], publicUrl: '', messages: [] }
   const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'))
-  if (!data.activities) data.activities = []
+  if (!data.publicUrl) data.publicUrl = ''
+  if (!data.messages) data.messages = []
   return data
 }
 
@@ -88,45 +88,6 @@ app.post('/api/know', (req, res) => {
   res.json({ ok: true })
 })
 
-app.get('/api/activities', (req, res) => {
-  const db = readDB()
-  res.json({ activities: db.activities })
-})
-
-app.post('/api/activities', (req, res) => {
-  const { fromId, title, description, location } = req.body
-  if (!fromId || !title) return res.status(400).json({ error: 'fromId and title required' })
-  const db = readDB()
-  if (!db.people.find(p => p.id === fromId)) return res.status(404).json({ error: 'Person not found' })
-  const activity = { id: Date.now().toString(), fromId, title, description: description || '', location: location || '', joiners: [fromId] }
-  db.activities.push(activity)
-  writeDB(db)
-  res.json({ ok: true, id: activity.id })
-})
-
-app.post('/api/activities/:id/join', (req, res) => {
-  const { userId } = req.body
-  const db = readDB()
-  const activity = db.activities.find(a => a.id === req.params.id)
-  if (!activity) return res.status(404).json({ error: 'Not found' })
-  const idx = activity.joiners.indexOf(userId)
-  if (idx === -1) activity.joiners.push(userId)
-  else activity.joiners.splice(idx, 1)
-  writeDB(db)
-  res.json({ ok: true, joined: idx === -1 })
-})
-
-app.delete('/api/activities/:id', (req, res) => {
-  const { userId } = req.body
-  const db = readDB()
-  const activity = db.activities.find(a => a.id === req.params.id)
-  if (!activity) return res.status(404).json({ error: 'Not found' })
-  if (activity.fromId !== userId) return res.status(403).json({ error: 'Not your activity' })
-  db.activities = db.activities.filter(a => a.id !== req.params.id)
-  writeDB(db)
-  res.json({ ok: true })
-})
-
 const PORT = 3001
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
@@ -135,4 +96,33 @@ app.listen(PORT, () => {
 
 app.get('/api/url', (req, res) => {
   res.json({ url: `http://${getLocalIP()}:${PORT}` })
+})
+
+app.get('/api/messages', (req, res) => {
+  const db = readDB()
+  res.json({ messages: db.messages })
+})
+
+app.post('/api/messages', (req, res) => {
+  const { fromId, text } = req.body
+  if (!fromId || !text) return res.status(400).json({ error: 'fromId and text required' })
+  const db = readDB()
+  if (!db.people.some(p => p.id === fromId)) return res.status(403).json({ error: 'Not registered' })
+  const msg = { id: Date.now().toString(), fromId, text: text.slice(0, 500) }
+  db.messages.push(msg)
+  writeDB(db)
+  res.json({ ok: true, message: msg })
+})
+
+app.get('/api/config', (req, res) => {
+  const db = readDB()
+  res.json({ publicUrl: db.publicUrl })
+})
+
+app.post('/api/config', (req, res) => {
+  const { publicUrl } = req.body
+  const db = readDB()
+  db.publicUrl = publicUrl || ''
+  writeDB(db)
+  res.json({ ok: true })
 })
