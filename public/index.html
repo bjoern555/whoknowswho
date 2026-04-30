@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Who Knows Who</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    h1, h2 { color: #333; }
+    input { padding: 8px; font-size: 16px; width: 200px; }
+    button.primary { padding: 8px 16px; font-size: 16px; cursor: pointer; }
+
+    .picker-label { margin: 14px 0 6px; font-weight: bold; color: #555; font-size: 14px; }
+
+    .color-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .color-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 3px solid transparent; cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .color-btn.selected { border-color: #222; box-shadow: 0 0 0 2px white, 0 0 0 4px #222; transform: scale(1.15); }
+
+    .emoji-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .emoji-btn {
+      width: 42px; height: 42px; font-size: 22px;
+      border: 2px solid #ddd; border-radius: 8px;
+      background: #f5f5f5; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .emoji-btn.selected { border-color: #222; background: #e0e0e0; }
+    .emoji-btn.none-btn { font-size: 14px; color: #999; }
+
+    #peopleList { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    .person-btn {
+      padding: 10px 16px; border: 2px solid #ccc;
+      border-radius: 8px; background: #f0f0f0;
+      cursor: pointer; font-size: 15px;
+    }
+    .person-btn.known {
+      background: #c8f7c5; border-color: #27ae60;
+      color: #1a7a40; font-weight: bold;
+    }
+
+    #profileLine { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    #profileBadge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 20px;
+      font-size: 16px; font-weight: bold; color: white;
+    }
+    #editToggle {
+      font-size: 14px; cursor: pointer;
+      padding: 6px 14px; border-radius: 20px;
+      border: 2px solid #ccc; background: white; color: #555;
+    }
+    #editToggle:hover { border-color: #888; color: #222; }
+
+    #editSection { background: #f9f9f9; border-radius: 10px; padding: 14px; margin: 10px 0; }
+
+    #qrSection { margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Who Knows Who?</h1>
+
+  <div id="registerSection">
+    <h2>Join the party</h2>
+    <input id="nameInput" type="text" placeholder="Your name" /><br>
+
+    <div class="picker-label">Pick a color</div>
+    <div class="color-row" id="regColorPicker"></div>
+
+    <div class="picker-label">Pick an emoji <span style="font-weight:normal;color:#aaa">(optional)</span></div>
+    <div class="emoji-grid" id="regEmojiPicker"></div>
+    <br>
+    <button class="primary" onclick="register()">Join &rarr;</button>
+  </div>
+
+  <div id="mainSection" style="display:none">
+    <div id="profileLine">
+      <span id="profileBadge"></span>
+      <button id="editToggle" onclick="toggleEdit()">✏️ Edit profile</button>
+    </div>
+
+    <div id="editSection" style="display:none">
+      <div class="picker-label">Color</div>
+      <div class="color-row" id="editColorPicker"></div>
+      <div class="picker-label">Emoji</div>
+      <div class="emoji-grid" id="editEmojiPicker"></div>
+      <br>
+      <button class="primary" onclick="saveProfile()">Save</button>
+    </div>
+
+    <p>Click the people you know. Click again to remove.</p>
+    <div id="peopleList"></div>
+    <br>
+    <button class="primary" onclick="viewGraph()">See the graph &rarr;</button>
+  </div>
+
+  <div id="qrSection">
+    <p style="color:#888">Share this link so others can join:</p>
+    <div id="qrcode"></div>
+    <p style="font-size:12px;color:#aaa" id="appUrl"></p>
+    <span onclick="document.getElementById('urlOverrideSection').style.display='block';this.style.display='none'" style="font-size:11px;color:#ccc;cursor:pointer;user-select:none">⚙ host settings</span>
+    <div id="urlOverrideSection" style="display:none;margin-top:8px">
+      <input id="urlOverride" type="text" placeholder="Paste tunnel URL (e.g. https://xxx.trycloudflare.com)" style="width:280px;font-size:13px" />
+      <button onclick="updateQR()" style="font-size:13px;padding:6px 10px;cursor:pointer">Update QR</button>
+    </div>
+  </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+  <script>
+    const PALETTE = [
+      { name: 'blue',   hex: '#4a90d9' },
+      { name: 'pink',   hex: '#ff69b4' },
+      { name: 'yellow', hex: '#ffd700' },
+      { name: 'green',  hex: '#2ecc71' },
+      { name: 'red',    hex: '#e74c3c' },
+      { name: 'violet', hex: '#9b59b6' },
+    ]
+    const EMOJIS = ['🎉','😊','😎','🔥','💎','🌟','🍕','🎸','🦄','🐱','🚀','🌈','🍺','👑','🦊','💪','🎭','🤗']
+
+    let myId    = localStorage.getItem('myId')
+    let myName  = localStorage.getItem('myName')
+    let myColor = localStorage.getItem('myColor') || '#4a90d9'
+    let myEmoji = localStorage.getItem('myEmoji') || ''
+
+    let regColor = myColor
+    let regEmoji = myEmoji
+    let editColor = myColor
+    let editEmoji = myEmoji
+
+    buildPicker('regColorPicker',  'regEmojiPicker',  regColor,  regEmoji,
+      c => regColor = c, e => regEmoji = e)
+    buildPicker('editColorPicker', 'editEmojiPicker', myColor, myEmoji,
+      c => editColor = c, e => editEmoji = e)
+
+    if (myId) showMain()
+
+    let qrInstance = null
+    function renderQR(url) {
+      document.getElementById('appUrl').textContent = url
+      document.getElementById('qrcode').innerHTML = ''
+      qrInstance = new QRCode(document.getElementById('qrcode'), { text: url, width: 128, height: 128 })
+    }
+    function updateQR() {
+      const val = document.getElementById('urlOverride').value.trim()
+      if (val) {
+        renderQR(val)
+        document.getElementById('urlOverrideSection').style.display = 'none'
+      }
+    }
+    renderQR(window.location.origin)
+
+    function buildPicker(colorId, emojiId, selColor, selEmoji, onColor, onEmoji) {
+      const colorEl = document.getElementById(colorId)
+      PALETTE.forEach(c => {
+        const btn = document.createElement('button')
+        btn.className = 'color-btn' + (c.hex === selColor ? ' selected' : '')
+        btn.style.background = c.hex
+        btn.title = c.name
+        btn.onclick = () => {
+          colorEl.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'))
+          btn.classList.add('selected')
+          onColor(c.hex)
+        }
+        colorEl.appendChild(btn)
+      })
+
+      const emojiEl = document.getElementById(emojiId)
+      const noneBtn = document.createElement('button')
+      noneBtn.className = 'emoji-btn none-btn' + (!selEmoji ? ' selected' : '')
+      noneBtn.textContent = '✕'
+      noneBtn.title = 'No emoji'
+      noneBtn.onclick = () => {
+        emojiEl.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'))
+        noneBtn.classList.add('selected')
+        onEmoji('')
+      }
+      emojiEl.appendChild(noneBtn)
+
+      EMOJIS.forEach(e => {
+        const btn = document.createElement('button')
+        btn.className = 'emoji-btn' + (e === selEmoji ? ' selected' : '')
+        btn.textContent = e
+        btn.onclick = () => {
+          emojiEl.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'))
+          btn.classList.add('selected')
+          onEmoji(e)
+        }
+        emojiEl.appendChild(btn)
+      })
+    }
+
+    function updateBadge() {
+      const badge = document.getElementById('profileBadge')
+      badge.style.background = myColor
+      badge.textContent = (myEmoji ? myEmoji + ' ' : '') + myName
+    }
+
+    async function register() {
+      const name = document.getElementById('nameInput').value.trim()
+      if (!name) return
+
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, color: regColor, emoji: regEmoji })
+      })
+      const data = await res.json()
+      myId    = data.id
+      myName  = name
+      myColor = data.color || regColor
+      myEmoji = data.emoji !== undefined ? data.emoji : regEmoji
+      localStorage.setItem('myId',    myId)
+      localStorage.setItem('myName',  myName)
+      localStorage.setItem('myColor', myColor)
+      localStorage.setItem('myEmoji', myEmoji)
+      showMain()
+    }
+
+    function toggleEdit() {
+      const s = document.getElementById('editSection')
+      s.style.display = s.style.display === 'none' ? 'block' : 'none'
+    }
+
+    async function saveProfile() {
+      myColor = editColor
+      myEmoji = editEmoji
+      localStorage.setItem('myColor', myColor)
+      localStorage.setItem('myEmoji', myEmoji)
+      await fetch('/api/people/' + myId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ color: myColor, emoji: myEmoji })
+      })
+      updateBadge()
+      document.getElementById('editSection').style.display = 'none'
+    }
+
+    async function showMain() {
+      document.getElementById('registerSection').style.display = 'none'
+      document.getElementById('mainSection').style.display = 'block'
+      updateBadge()
+
+      // sync edit pickers to current values
+      editColor = myColor
+      editEmoji = myEmoji
+
+      const res  = await fetch('/api/people')
+      const data = await res.json()
+      const meRes = await fetch('/api/people/' + myId)
+      const me    = await meRes.json()
+      const knownIds = new Set(me.knows || [])
+
+      const list = document.getElementById('peopleList')
+      list.innerHTML = ''
+      data.people
+        .filter(p => p.id !== myId)
+        .forEach(p => {
+          const btn = document.createElement('button')
+          btn.className = 'person-btn' + (knownIds.has(p.id) ? ' known' : '')
+          const label = (p.emoji ? p.emoji + ' ' : '') + p.name
+          btn.textContent = knownIds.has(p.id) ? '✓ ' + label : label
+          btn.onclick = () => toggleKnow(p.id, btn, label, knownIds)
+          list.appendChild(btn)
+        })
+    }
+
+    async function toggleKnow(personId, btn, label, knownIds) {
+      const isKnown = knownIds.has(personId)
+      await fetch('/api/know', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromId: myId, toId: personId, knows: !isKnown })
+      })
+      if (isKnown) {
+        knownIds.delete(personId)
+        btn.classList.remove('known')
+        btn.textContent = label
+      } else {
+        knownIds.add(personId)
+        btn.classList.add('known')
+        btn.textContent = '✓ ' + label
+      }
+    }
+
+    function viewGraph() { window.location.href = '/graph.html' }
+  </script>
+</body>
+</html>

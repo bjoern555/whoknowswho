@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Who Knows Who — Graph</title>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    body { margin: 0; font-family: sans-serif; background: #1a1a2e; color: white; }
+    #graph { width: 100vw; height: 100vh; }
+    #info {
+      position: fixed; top: 20px; left: 20px; z-index: 10;
+      background: rgba(0,0,0,0.7); padding: 12px 18px; border-radius: 8px;
+    }
+    #tooltip {
+      display: none;
+      position: fixed;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 8px;
+      pointer-events: none;
+      font-size: 14px;
+    }
+    a { color: #7ecfff; }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <strong>Who Knows Who</strong><br>
+    <small>Click a node to see their connections</small><br><br>
+    <a href="/">&#x2190; Back to my connections</a>
+  </div>
+  <div id="tooltip"></div>
+  <div id="graph"></div>
+
+  <script>
+    function buildGraphData(people) {
+      const connectionCount = {}
+      people.forEach(p => { connectionCount[p.id] = 0 })
+      const edges = []
+      const seen = new Set()
+      people.forEach(p => {
+        p.knows.forEach(toId => {
+          const key = [p.id, toId].sort().join('|')
+          if (!seen.has(key)) {
+            seen.add(key)
+            edges.push({ id: key, from: p.id, to: toId, color: { color: '#666', highlight: '#7ecfff' } })
+            connectionCount[p.id]++
+            connectionCount[toId]++
+          }
+        })
+      })
+      const nodes = people.map(p => {
+        const bg = p.color || '#4a90d9'
+        const lightBg = ['#ffd700', '#ff69b4'].includes(bg)
+        const label = (p.emoji ? p.emoji + ' ' : '') + p.name
+        return {
+          id: p.id,
+          label,
+          title: `${label}\n${connectionCount[p.id]} connection${connectionCount[p.id] !== 1 ? 's' : ''}`,
+          color: { background: bg, border: bg, highlight: { background: bg, border: '#fff' } },
+          font: { color: lightBg ? '#333' : 'white', size: 14 }
+        }
+      })
+      return { nodes, edges, people }
+    }
+
+    async function fetchPeople() {
+      const res = await fetch('/api/people')
+      const { people } = await res.json()
+      return people
+    }
+
+    async function init() {
+      const people = await fetchPeople()
+      const { nodes, edges } = buildGraphData(people)
+
+      const nodeSet = new vis.DataSet(nodes)
+      const edgeSet = new vis.DataSet(edges)
+
+      const network = new vis.Network(
+        document.getElementById('graph'),
+        { nodes: nodeSet, edges: edgeSet },
+        {
+          physics: { stabilization: false, barnesHut: { gravitationalConstant: -3000 } },
+          interaction: { hover: true, tooltipDelay: 100 }
+        }
+      )
+
+      let currentPeople = people
+      const tooltip = document.getElementById('tooltip')
+
+      network.on('click', params => {
+        if (params.nodes.length === 0) { tooltip.style.display = 'none'; return }
+        const nodeId = params.nodes[0]
+        const person = currentPeople.find(p => p.id === nodeId)
+        const connected = currentPeople.filter(p =>
+          p.id !== nodeId && (person.knows.includes(p.id) || p.knows.includes(nodeId))
+        ).map(p => p.name)
+        tooltip.style.display = 'block'
+        tooltip.style.left = params.event.srcEvent.clientX + 15 + 'px'
+        tooltip.style.top = params.event.srcEvent.clientY + 15 + 'px'
+        tooltip.innerHTML = `<strong>${person.name}</strong><br>Connected to: ${connected.length ? connected.join(', ') : 'nobody yet'}`
+      })
+
+      // refresh data every 5 seconds, update nodes/edges in-place
+      setInterval(async () => {
+        const fresh = await fetchPeople()
+        const { nodes: newNodes, edges: newEdges } = buildGraphData(fresh)
+        currentPeople = fresh
+
+        const existingNodeIds = new Set(nodeSet.getIds())
+        const existingEdgeIds = new Set(edgeSet.getIds())
+
+        newNodes.forEach(n => {
+          if (existingNodeIds.has(n.id)) nodeSet.update(n)
+          else nodeSet.add(n)
+        })
+
+        newEdges.forEach(e => {
+          if (existingEdgeIds.has(e.id)) edgeSet.update(e)
+          else edgeSet.add(e)
+        })
+
+        // remove edges that no longer exist
+        existingEdgeIds.forEach(id => {
+          if (!newEdges.find(e => e.id === id)) edgeSet.remove(id)
+        })
+      }, 5000)
+    }
+
+    init()
+  </script>
+</body>
+</html>
