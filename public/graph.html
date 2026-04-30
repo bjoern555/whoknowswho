@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Who Knows Who — Graph</title>
+  <title>Wer kennt wer (WG Edition)</title>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
   <style>
@@ -106,9 +106,9 @@
 </head>
 <body>
   <div id="info">
-    <strong>Who Knows Who</strong><br>
-    <small>Click a node to see their connections</small><br><br>
-    <a href="/">&#x2190; Back to my connections</a>
+    <strong>Wer kennt wer (WG Edition)</strong><br>
+    <small>Klick uf eppert für meh infos</small><br><br>
+    <a href="/">&#x2190; Zrug zum profil</a>
   </div>
   <div id="qrPanel">
     <button id="qrToggle" onclick="toggleQR()">QR code ▼</button>
@@ -119,7 +119,7 @@
   </div>
   <div id="tooltip"></div>
   <div id="stats">
-    <div><span class="stat-value" id="statPeople">0</span> people</div>
+    <div><span class="stat-value" id="statPeople">0</span> lüüt</div>
     <div><span class="stat-value" id="statConnections">0</span> connections</div>
     <div id="statTop" style="color:#aaa;font-size:12px"></div>
   </div>
@@ -136,7 +136,7 @@
     </div>
     <div id="chatMessages"></div>
     <div id="chatInputRow">
-      <input id="chatText" placeholder="Message…" maxlength="500" />
+      <input id="chatText" placeholder="Nachricht…" maxlength="500" />
       <button id="chatSendBtn" onclick="sendMessage()">&#x2192;</button>
     </div>
   </div>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Who Knows Who</title>
+  <title>Wer kennt wer (WG Edition)</title>
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
     h1, h2 { color: #333; }
@@ -60,16 +60,16 @@
   </style>
 </head>
 <body>
-  <h1>Who Knows Who?</h1>
+  <h1>Wer kennt wer (WG Edition)</h1>
 
   <div id="registerSection">
-    <h2>Join the party</h2>
-    <input id="nameInput" type="text" placeholder="Your name" onkeydown="if(event.key==='Enter') register()" /><br>
+    <h2>Join de party</h2>
+    <input id="nameInput" type="text" placeholder="Din name" onkeydown="if(event.key==='Enter') register()" /><br>
 
-    <div class="picker-label">Pick a color</div>
+    <div class="picker-label">Wähl en farb</div>
     <div class="color-row" id="regColorPicker"></div>
 
-    <div class="picker-label">Pick an emoji <span style="font-weight:normal;color:#aaa">(optional)</span></div>
+    <div class="picker-label">Wähl en emoji <span style="font-weight:normal;color:#aaa">(optional)</span></div>
     <div class="emoji-grid" id="regEmojiPicker"></div>
 
     <div class="picker-label">Wie betrunke wirsch hütt si?</div>
@@ -80,16 +80,17 @@
     </div>
     <br><br>
     <button class="primary" onclick="register()">Join &rarr;</button>
+
   </div>
 
   <div id="mainSection" style="display:none">
     <div id="profileLine">
       <span id="profileBadge"></span>
-      <button id="editToggle" onclick="toggleEdit()">✏️ Edit profile</button>
+      <button id="editToggle" onclick="toggleEdit()">✏️ Profil bearbeite</button>
     </div>
 
     <div id="editSection" style="display:none">
-      <div class="picker-label">Color</div>
+      <div class="picker-label">Farb</div>
       <div class="color-row" id="editColorPicker"></div>
       <div class="picker-label">Emoji</div>
       <div class="emoji-grid" id="editEmojiPicker"></div>
@@ -100,17 +101,17 @@
         <span id="editDrunkVal" style="font-size:20px;font-weight:bold;min-width:24px">5</span>
       </div>
       <br>
-      <button class="primary" onclick="saveProfile()">Save</button>
+      <button class="primary" onclick="saveProfile()">Speichere</button>
     </div>
 
-    <p>Click the people you know. Click again to remove.</p>
+    <p>Klick d lüüt a wo d kennsch. Klick nomal zums lösche.</p>
     <div id="peopleList"></div>
     <br>
-    <button class="primary" onclick="viewGraph()">See the graph &rarr;</button>
+    <button class="primary" onclick="viewGraph()">Gahn zum graph &rarr;</button>
   </div>
 
   <div id="qrSection">
-    <p style="color:#888">Share this link so others can join:</p>
+    <p style="color:#888">Share de QR-Code:</p>
     <div id="qrcode"></div>
     <p style="font-size:12px;color:#aaa" id="appUrl"></p>
     <button onclick="document.getElementById('urlOverrideSection').style.display='block';this.style.display='none'" style="font-size:11px;color:#ccc;cursor:pointer;user-select:none;background:none;border:none;padding:0">⚙ host settings</button>
