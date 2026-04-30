@@ -57,6 +57,24 @@
     #editSection { background: #f9f9f9; border-radius: 10px; padding: 14px; margin: 10px 0; }
 
     #qrSection { margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; }
+
+    #activitySection { margin-top: 24px; border-top: 1px solid #eee; padding-top: 16px; }
+    #activityForm { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    #activityForm input { width: 280px; font-size: 14px; }
+    .activity-card {
+      border: 1px solid #e0e0e0; border-radius: 10px;
+      padding: 12px 14px; margin-top: 10px; background: #fafafa;
+    }
+    .activity-card .act-title { font-weight: bold; font-size: 15px; }
+    .activity-card .act-meta { font-size: 13px; color: #888; margin: 4px 0 8px; }
+    .activity-card .act-joiners { font-size: 13px; color: #555; margin-bottom: 10px; }
+    .activity-card .act-actions { display: flex; gap: 8px; align-items: center; }
+    .join-btn {
+      font-size: 22px; padding: 4px 10px; cursor: pointer;
+      border: 2px solid #ddd; border-radius: 8px; background: white;
+    }
+    .join-btn.joined { border-color: #27ae60; background: #f0fff0; }
+    .delete-btn { font-size: 12px; color: #bbb; cursor: pointer; background: none; border: none; margin-left: auto; }
   </style>
 </head>
 <body>
@@ -92,6 +110,17 @@
 
     <p>Click the people you know. Click again to remove.</p>
     <div id="peopleList"></div>
+
+    <div id="activitySection">
+      <button class="primary" onclick="toggleActivityForm()">📣 Plan an activity</button>
+      <div id="activityForm" style="display:none">
+        <input id="actTitle" placeholder="Title e.g. Pizza run 🍕" maxlength="50" />
+        <input id="actDesc" placeholder="Short description (optional)" maxlength="120" />
+        <input id="actLocation" placeholder="📍 Location (optional)" maxlength="50" />
+        <button class="primary" onclick="createActivity()">Post →</button>
+      </div>
+      <div id="activityList"></div>
+    </div>
     <br>
     <button class="primary" onclick="viewGraph()">See the graph &rarr;</button>
   </div>
@@ -255,6 +284,8 @@
 
       const list = document.getElementById('peopleList')
       list.innerHTML = ''
+      loadActivities()
+
       data.people
         .filter(p => p.id !== myId)
         .forEach(p => {
@@ -286,6 +317,88 @@
     }
 
     function viewGraph() { window.location.href = '/graph.html' }
+
+    function toggleActivityForm() {
+      const f = document.getElementById('activityForm')
+      f.style.display = f.style.display === 'none' ? 'flex' : 'none'
+    }
+
+    async function createActivity() {
+      const title = document.getElementById('actTitle').value.trim()
+      if (!title) return
+      await fetch('/api/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromId: myId,
+          title,
+          description: document.getElementById('actDesc').value.trim(),
+          location: document.getElementById('actLocation').value.trim()
+        })
+      })
+      document.getElementById('actTitle').value = ''
+      document.getElementById('actDesc').value = ''
+      document.getElementById('actLocation').value = ''
+      document.getElementById('activityForm').style.display = 'none'
+      loadActivities()
+    }
+
+    async function loadActivities() {
+      const [actRes, peopleRes] = await Promise.all([fetch('/api/activities'), fetch('/api/people')])
+      const { activities } = await actRes.json()
+      const { people } = await peopleRes.json()
+      renderActivities(activities, people)
+    }
+
+    function renderActivities(activities, people) {
+      const list = document.getElementById('activityList')
+      list.innerHTML = ''
+      if (!activities.length) return
+      activities.forEach(act => {
+        const creator = people.find(p => p.id === act.fromId)
+        const creatorLabel = creator ? (creator.emoji ? creator.emoji + ' ' : '') + creator.name : '?'
+        const joined = act.joiners.includes(myId)
+        const joinerNames = act.joiners.map(id => {
+          const p = people.find(p => p.id === id)
+          return p ? (p.emoji ? p.emoji + ' ' : '') + p.name : null
+        }).filter(Boolean)
+
+        const card = document.createElement('div')
+        card.className = 'activity-card'
+        card.innerHTML = `
+          <div class="act-title">${act.title}</div>
+          <div class="act-meta">
+            ${act.description ? act.description + ' · ' : ''}
+            ${act.location ? '📍 ' + act.location + ' · ' : ''}
+            by ${creatorLabel}
+          </div>
+          <div class="act-joiners">${joinerNames.length ? '👥 ' + joinerNames.join(', ') : 'No one joined yet'}</div>
+          <div class="act-actions">
+            <button class="join-btn ${joined ? 'joined' : ''}" onclick="toggleJoinActivity('${act.id}')">👍</button>
+            ${act.fromId === myId ? `<button class="delete-btn" onclick="deleteActivity('${act.id}')">✕ delete</button>` : ''}
+          </div>
+        `
+        list.appendChild(card)
+      })
+    }
+
+    async function toggleJoinActivity(actId) {
+      await fetch('/api/activities/' + actId + '/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: myId })
+      })
+      loadActivities()
+    }
+
+    async function deleteActivity(actId) {
+      await fetch('/api/activities/' + actId, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: myId })
+      })
+      loadActivities()
+    }
   </script>
 </body>
 </html>

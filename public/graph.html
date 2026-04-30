@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Who Knows Who — Graph</title>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
   <style>
     body { margin: 0; font-family: sans-serif; background: #1a1a2e; color: white; }
     #graph { width: 100vw; height: 100vh; }
@@ -12,6 +13,12 @@
       position: fixed; top: 20px; left: 20px; z-index: 10;
       background: rgba(0,0,0,0.7); padding: 12px 18px; border-radius: 8px;
     }
+    #stats {
+      position: fixed; bottom: 20px; left: 20px; z-index: 10;
+      background: rgba(0,0,0,0.7); padding: 12px 18px; border-radius: 8px;
+      font-size: 13px; line-height: 1.8;
+    }
+    #stats .stat-value { font-weight: bold; font-size: 18px; }
     #tooltip {
       display: none;
       position: fixed;
@@ -23,6 +30,48 @@
       font-size: 14px;
     }
     a { color: #7ecfff; }
+    #bubbleLayer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; overflow: hidden; }
+    .speech-bubble {
+      position: fixed; pointer-events: auto; cursor: pointer;
+      background: white; color: #222; border-radius: 10px;
+      padding: 8px 12px; max-width: 160px;
+      box-shadow: 0 3px 16px rgba(0,0,0,0.5);
+      font-size: 13px; line-height: 1.3;
+      transform: translateY(calc(-100% - 14px));
+      transition: box-shadow 0.15s;
+    }
+    .speech-bubble:hover { box-shadow: 0 5px 20px rgba(0,0,0,0.7); }
+    .speech-bubble::after {
+      content: ''; position: absolute; top: 100%; left: 16px;
+      border: 8px solid transparent; border-top: 8px solid white;
+    }
+    .bubble-count { font-size: 11px; color: #888; margin-top: 3px; }
+    #actModal {
+      display: none; position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: white; color: #333; border-radius: 16px;
+      padding: 24px; z-index: 101; width: 300px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+    #actModalOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; }
+    #modalJoinBtn { font-size: 28px; padding: 6px 18px; cursor: pointer; border: 2px solid #ddd; border-radius: 10px; background: white; margin-top: 12px; }
+    #modalJoinBtn.joined { border-color: #27ae60; background: #f0fff0; }
+    #qrPanel {
+      position: fixed; top: 20px; right: 20px; z-index: 10;
+      background: rgba(0,0,0,0.7); border-radius: 8px;
+      text-align: center;
+    }
+    #qrToggle {
+      display: block; width: 100%; padding: 10px 16px;
+      background: none; border: none; color: white;
+      font-size: 13px; cursor: pointer; border-radius: 8px;
+      white-space: nowrap;
+    }
+    #qrToggle:hover { background: rgba(255,255,255,0.1); }
+    #qrContent { display: none; padding: 0 16px 14px; }
+    #qrContent.open { display: block; }
+    #qrcode canvas, #qrcode img { border-radius: 6px; }
+    #qrUrl { font-size: 11px; color: #aaa; margin-top: 6px; word-break: break-all; max-width: 160px; }
   </style>
 </head>
 <body>
@@ -31,10 +80,134 @@
     <small>Click a node to see their connections</small><br><br>
     <a href="/">&#x2190; Back to my connections</a>
   </div>
+  <div id="qrPanel">
+    <button id="qrToggle" onclick="toggleQR()">QR code ▼</button>
+    <div id="qrContent">
+      <div id="qrcode"></div>
+      <div id="qrUrl"></div>
+    </div>
+  </div>
+  <div id="bubbleLayer"></div>
+  <div id="actModalOverlay" onclick="closeModal()"></div>
+  <div id="actModal">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <h3 id="modalTitle" style="margin:0;font-size:18px"></h3>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1">✕</button>
+    </div>
+    <p id="modalDesc" style="color:#666;margin:8px 0 4px;font-size:14px"></p>
+    <p id="modalLocation" style="color:#999;font-size:13px;margin:0"></p>
+    <div id="modalJoiners" style="margin-top:12px;font-size:14px;color:#444"></div>
+    <div><button id="modalJoinBtn" onclick="toggleJoinModal()">👍</button></div>
+  </div>
   <div id="tooltip"></div>
+  <div id="stats">
+    <div><span class="stat-value" id="statPeople">0</span> people</div>
+    <div><span class="stat-value" id="statConnections">0</span> connections</div>
+    <div id="statTop" style="color:#aaa;font-size:12px"></div>
+  </div>
   <div id="graph"></div>
 
   <script>
+    const myId = localStorage.getItem('myId')
+    let currentActivities = []
+    let currentPeopleForModal = []
+    let activeModalId = null
+
+    async function fetchActivities() {
+      const res = await fetch('/api/activities')
+      const { activities } = await res.json()
+      return activities
+    }
+
+    function renderBubbles(activities, people, network) {
+      currentActivities = activities
+      currentPeopleForModal = people
+      const layer = document.getElementById('bubbleLayer')
+      layer.innerHTML = ''
+      activities.forEach(act => {
+        const creator = people.find(p => p.id === act.fromId)
+        if (!creator) return
+        const positions = network.getPositions([act.fromId])
+        if (!positions[act.fromId]) return
+        const dom = network.canvasToDOM(positions[act.fromId])
+        const bubble = document.createElement('div')
+        bubble.className = 'speech-bubble'
+        bubble.id = 'bubble-' + act.id
+        bubble.style.left = (dom.x + 12) + 'px'
+        bubble.style.top = (dom.y - 4) + 'px'
+        bubble.style.borderLeft = '3px solid ' + (creator.color || '#4a90d9')
+        const joinerCount = act.joiners.length
+        bubble.innerHTML = `<strong>${act.title}</strong><div class="bubble-count">👍 ${joinerCount} joining</div>`
+        bubble.onclick = () => showActivityModal(act.id)
+        layer.appendChild(bubble)
+      })
+    }
+
+    function updateBubblePositions(network) {
+      currentActivities.forEach(act => {
+        const bubble = document.getElementById('bubble-' + act.id)
+        if (!bubble) return
+        const positions = network.getPositions([act.fromId])
+        if (!positions[act.fromId]) return
+        const dom = network.canvasToDOM(positions[act.fromId])
+        bubble.style.left = (dom.x + 12) + 'px'
+        bubble.style.top = (dom.y - 4) + 'px'
+      })
+    }
+
+    function showActivityModal(actId) {
+      activeModalId = actId
+      const act = currentActivities.find(a => a.id === actId)
+      const people = currentPeopleForModal
+      if (!act) return
+      document.getElementById('modalTitle').textContent = act.title
+      document.getElementById('modalDesc').textContent = act.description || ''
+      document.getElementById('modalLocation').textContent = act.location ? '📍 ' + act.location : ''
+      const joinerNames = act.joiners.map(id => {
+        const p = people.find(p => p.id === id)
+        return p ? (p.emoji ? p.emoji + ' ' : '') + p.name : null
+      }).filter(Boolean)
+      document.getElementById('modalJoiners').innerHTML = joinerNames.length
+        ? '<strong>Joining:</strong> ' + joinerNames.join(', ')
+        : 'No one joined yet'
+      const btn = document.getElementById('modalJoinBtn')
+      const joined = myId && act.joiners.includes(myId)
+      btn.className = joined ? 'joined' : ''
+      btn.style.display = myId ? 'inline-block' : 'none'
+      document.getElementById('actModal').style.display = 'block'
+      document.getElementById('actModalOverlay').style.display = 'block'
+    }
+
+    function closeModal() {
+      document.getElementById('actModal').style.display = 'none'
+      document.getElementById('actModalOverlay').style.display = 'none'
+      activeModalId = null
+    }
+
+    async function toggleJoinModal() {
+      if (!myId || !activeModalId) return
+      await fetch('/api/activities/' + activeModalId + '/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: myId })
+      })
+      const activities = await fetchActivities()
+      currentActivities = activities
+      showActivityModal(activeModalId)
+    }
+
+    function toggleQR() {
+      const content = document.getElementById('qrContent')
+      const btn = document.getElementById('qrToggle')
+      const open = content.classList.toggle('open')
+      btn.textContent = open ? 'QR code ▲' : 'QR code ▼'
+    }
+
+    fetch('/api/url').then(r => r.json()).then(({ url }) => {
+      new QRCode(document.getElementById('qrcode'), { text: url, width: 160, height: 160 })
+      document.getElementById('qrUrl').textContent = url
+    })
+
     function buildGraphData(people) {
       const connectionCount = {}
       people.forEach(p => { connectionCount[p.id] = 0 })
@@ -73,7 +246,7 @@
     }
 
     async function init() {
-      const people = await fetchPeople()
+      const [people, activities] = await Promise.all([fetchPeople(), fetchActivities()])
       const { nodes, edges } = buildGraphData(people)
 
       const nodeSet = new vis.DataSet(nodes)
@@ -89,6 +262,38 @@
       )
 
       let currentPeople = people
+
+      function updateStats(people, edges) {
+        document.getElementById('statPeople').textContent = people.length
+        document.getElementById('statConnections').textContent = edges.length
+        const top = people.reduce((a, b) => {
+          const ca = edges.filter(e => e.from === a.id || e.to === a.id).length
+          const cb = edges.filter(e => e.from === b.id || e.to === b.id).length
+          return cb > ca ? b : a
+        }, people[0])
+        if (top) {
+          const label = (top.emoji ? top.emoji + ' ' : '') + top.name
+          document.getElementById('statTop').textContent = '⭐ most connected: ' + label
+        }
+      }
+
+      function spotlight(nodeId, originalColor) {
+        const flashColor = '#ffffff'
+        let count = 0
+        const interval = setInterval(() => {
+          nodeSet.update({ id: nodeId, color: { background: count % 2 === 0 ? flashColor : originalColor, border: flashColor } })
+          count++
+          if (count >= 6) {
+            clearInterval(interval)
+            nodeSet.update({ id: nodeId, color: { background: originalColor, border: originalColor } })
+          }
+        }, 300)
+      }
+
+      updateStats(people, edges)
+      renderBubbles(activities, people, network)
+      network.on('afterDrawing', () => updateBubblePositions(network))
+
       const tooltip = document.getElementById('tooltip')
 
       network.on('click', params => {
@@ -115,7 +320,10 @@
 
         newNodes.forEach(n => {
           if (existingNodeIds.has(n.id)) nodeSet.update(n)
-          else nodeSet.add(n)
+          else {
+            nodeSet.add(n)
+            spotlight(n.id, n.color.background)
+          }
         })
 
         newEdges.forEach(e => {
@@ -123,10 +331,14 @@
           else edgeSet.add(e)
         })
 
-        // remove edges that no longer exist
         existingEdgeIds.forEach(id => {
           if (!newEdges.find(e => e.id === id)) edgeSet.remove(id)
         })
+
+        updateStats(fresh, newEdges)
+
+        const freshActivities = await fetchActivities()
+        renderBubbles(freshActivities, fresh, network)
       }, 5000)
     }
 
