@@ -5,12 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wer kennt wer (WG Edition)</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
-    h1, h2 { color: #333; }
-    input { padding: 8px; font-size: 16px; width: 200px; }
-    button.primary { padding: 8px 16px; font-size: 16px; cursor: pointer; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Arial Rounded MT Bold', 'Nunito', Arial, sans-serif;
+      max-width: 600px; margin: 0 auto; padding: 20px 20px 40px;
+      background: #a4cb6e; min-height: 100vh;
+    }
+    h1 {
+      color: #1a1a2e; font-size: clamp(16px, 4.8vw, 26px); font-weight: 900;
+      letter-spacing: -0.5px; margin: 0 0 20px; white-space: nowrap;
+    }
+    h2 { color: #1a1a2e; font-size: 19px; font-weight: 800; margin: 0 0 14px; }
 
-    .picker-label { margin: 14px 0 6px; font-weight: bold; color: #555; font-size: 14px; }
+    .card {
+      background: #faebd7; border-radius: 16px; padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    input[type="text"] {
+      padding: 10px 14px; font-size: 16px; width: 220px;
+      border: 2px solid #1a1a2e; border-radius: 10px;
+      background: white; color: #1a1a2e; outline: none;
+      font-family: inherit;
+    }
+    input[type="text"]:focus { border-color: #e8387a; }
+
+    button.primary {
+      padding: 10px 22px; font-size: 16px; font-weight: 800;
+      cursor: pointer; border: none; border-radius: 12px;
+      background: #f5a623; color: #1a1a2e;
+      font-family: inherit; letter-spacing: 0.3px;
+      box-shadow: 0 3px 0 #c4820e;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    button.primary:active { transform: translateY(2px); box-shadow: 0 1px 0 #c4820e; }
+
+    .picker-label { margin: 14px 0 6px; font-weight: 800; color: #1a1a2e; font-size: 14px; }
 
     .color-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .color-btn {
@@ -18,106 +48,121 @@
       border: 3px solid transparent; cursor: pointer;
       transition: transform 0.1s;
     }
-    .color-btn.selected { border-color: #222; box-shadow: 0 0 0 2px white, 0 0 0 4px #222; transform: scale(1.15); }
+    .color-btn.selected { border-color: #1a1a2e; box-shadow: 0 0 0 2px #faebd7, 0 0 0 4px #1a1a2e; transform: scale(1.15); }
 
     .emoji-grid { display: flex; flex-wrap: wrap; gap: 6px; }
     .emoji-btn {
       width: 42px; height: 42px; font-size: 22px;
-      border: 2px solid #ddd; border-radius: 8px;
-      background: #f5f5f5; cursor: pointer;
+      border: 2px solid #d4c4b0; border-radius: 10px;
+      background: white; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.1s;
     }
-    .emoji-btn.selected { border-color: #222; background: #e0e0e0; }
+    .emoji-btn.selected { border-color: #1a1a2e; background: #faebd7; }
     .emoji-btn.none-btn { font-size: 14px; color: #999; }
 
-    #peopleList { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    #peopleList { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
     .person-btn {
-      padding: 10px 16px; border: 2px solid #ccc;
-      border-radius: 8px; background: #f0f0f0;
-      cursor: pointer; font-size: 15px;
+      padding: 10px 16px; border: 2px solid #d4c4b0;
+      border-radius: 10px; background: white;
+      cursor: pointer; font-size: 15px; font-family: inherit;
+      color: #1a1a2e; font-weight: 600;
+      transition: border-color 0.1s, background 0.1s;
     }
+    .person-btn:hover { border-color: #f5a623; }
     .person-btn.known {
-      background: #c8f7c5; border-color: #27ae60;
-      color: #1a7a40; font-weight: bold;
+      background: #e8387a; border-color: #e8387a;
+      color: white; font-weight: 800;
     }
 
-    #profileLine { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    #profileLine { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
     #profileBadge {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 14px; border-radius: 20px;
-      font-size: 16px; font-weight: bold; color: white;
+      padding: 6px 16px; border-radius: 20px;
+      font-size: 16px; font-weight: 800; color: white;
     }
     #editToggle {
-      font-size: 14px; cursor: pointer;
+      font-size: 13px; cursor: pointer; font-weight: 700;
       padding: 6px 14px; border-radius: 20px;
-      border: 2px solid #ccc; background: white; color: #555;
+      border: 2px solid #1a1a2e; background: white; color: #1a1a2e;
+      font-family: inherit;
     }
-    #editToggle:hover { border-color: #888; color: #222; }
+    #editToggle:hover { background: #f5a623; border-color: #f5a623; }
 
-    #editSection { background: #f9f9f9; border-radius: 10px; padding: 14px; margin: 10px 0; }
+    #editSection {
+      background: white; border-radius: 12px; padding: 14px;
+      margin: 10px 0; border: 2px solid #d4c4b0;
+    }
 
-    #qrSection { margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; }
+    #qrSection {
+      background: #faebd7; border-radius: 16px; padding: 16px;
+      margin-top: 16px;
+    }
+    #qrSection p { color: #1a1a2e; margin: 0 0 10px; font-weight: 700; }
   </style>
 </head>
 <body>
-  <h1>Wer kennt wer (WG Edition)</h1>
+  <h1>🌸 Wer kennt wen (WG Edition) 🌸</h1>
 
-  <div id="registerSection">
-    <h2>Join de party</h2>
+  <div id="registerSection" class="card">
+    <h2>Join de party 🌸</h2>
     <input id="nameInput" type="text" placeholder="Din name" onkeydown="if(event.key==='Enter') register()" /><br>
 
     <div class="picker-label">Wähl en farb</div>
     <div class="color-row" id="regColorPicker"></div>
 
-    <div class="picker-label">Wähl en emoji <span style="font-weight:normal;color:#aaa">(optional)</span></div>
+    <div class="picker-label">Wähl en emoji <span style="font-weight:normal;color:#999">(optional)</span></div>
     <div class="emoji-grid" id="regEmojiPicker"></div>
 
     <div class="picker-label">Wie betrunke wirsch hütt si?</div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <input id="regDrunkLevel" type="range" min="0" max="10" value="5" style="width:180px"
+    <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+      <input id="regDrunkLevel" type="range" min="0" max="10" value="5" style="width:180px;accent-color:#e8387a"
         oninput="document.getElementById('regDrunkVal').textContent=this.value" />
-      <span id="regDrunkVal" style="font-size:20px;font-weight:bold;min-width:24px">5</span>
+      <span id="regDrunkVal" style="font-size:22px;font-weight:900;color:#e8387a;min-width:24px">5</span>
     </div>
-    <br><br>
+    <br>
     <button class="primary" onclick="register()">Join &rarr;</button>
-
   </div>
 
   <div id="mainSection" style="display:none">
-    <div id="profileLine">
-      <span id="profileBadge"></span>
-      <button id="editToggle" onclick="toggleEdit()">✏️ Profil bearbeite</button>
-    </div>
-
-    <div id="editSection" style="display:none">
-      <div class="picker-label">Farb</div>
-      <div class="color-row" id="editColorPicker"></div>
-      <div class="picker-label">Emoji</div>
-      <div class="emoji-grid" id="editEmojiPicker"></div>
-      <div class="picker-label">Wie betrunke wirsch hütt si?</div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <input id="editDrunkLevel" type="range" min="0" max="10" value="5" style="width:180px"
-          oninput="document.getElementById('editDrunkVal').textContent=this.value" />
-        <span id="editDrunkVal" style="font-size:20px;font-weight:bold;min-width:24px">5</span>
+    <div class="card" style="padding:14px 20px">
+      <div id="profileLine">
+        <span id="profileBadge"></span>
+        <button id="editToggle" onclick="toggleEdit()">✏️ Profil bearbeite</button>
       </div>
-      <br>
-      <button class="primary" onclick="saveProfile()">Speichere</button>
+
+      <div id="editSection" style="display:none">
+        <div class="picker-label">Farb</div>
+        <div class="color-row" id="editColorPicker"></div>
+        <div class="picker-label">Emoji</div>
+        <div class="emoji-grid" id="editEmojiPicker"></div>
+        <div class="picker-label">Wie betrunke wirsch hütt si?</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+          <input id="editDrunkLevel" type="range" min="0" max="10" value="5" style="width:180px;accent-color:#e8387a"
+            oninput="document.getElementById('editDrunkVal').textContent=this.value" />
+          <span id="editDrunkVal" style="font-size:22px;font-weight:900;color:#e8387a;min-width:24px">5</span>
+        </div>
+        <br>
+        <button class="primary" onclick="saveProfile()">Speichere</button>
+      </div>
     </div>
 
-    <p>Klick d lüüt a wo d kennsch. Klick nomal zums lösche.</p>
-    <div id="peopleList"></div>
-    <br>
-    <button class="primary" onclick="viewGraph()">Gahn zum graph &rarr;</button>
+    <div class="card">
+      <p style="margin:0 0 12px;color:#1a1a2e;font-weight:700;font-size:14px">Klick d lüüt a wo d kennsch. Klick nomal zums lösche.</p>
+      <div id="peopleList"></div>
+      <br>
+      <button class="primary" onclick="viewGraph()">Gahn zum graph &rarr;</button>
+    </div>
   </div>
 
   <div id="qrSection">
-    <p style="color:#888">Share de QR-Code:</p>
+    <p>Share de QR-Code:</p>
     <div id="qrcode"></div>
-    <p style="font-size:12px;color:#aaa" id="appUrl"></p>
-    <button onclick="document.getElementById('urlOverrideSection').style.display='block';this.style.display='none'" style="font-size:11px;color:#ccc;cursor:pointer;user-select:none;background:none;border:none;padding:0">⚙ host settings</button>
+    <p style="font-size:12px;color:#555;margin:6px 0 0" id="appUrl"></p>
+    <button onclick="document.getElementById('urlOverrideSection').style.display='block';this.style.display='none'" style="font-size:11px;color:#666;cursor:pointer;user-select:none;background:none;border:none;padding:4px 0;margin-top:6px;font-family:inherit">⚙ host settings</button>
     <div id="urlOverrideSection" style="display:none;margin-top:8px">
       <input id="urlOverride" type="text" placeholder="Paste tunnel URL (e.g. https://xxx.trycloudflare.com)" style="width:280px;font-size:13px" />
-      <button onclick="updateQR()" style="font-size:13px;padding:6px 10px;cursor:pointer">Update QR</button>
+      <button onclick="updateQR()" style="font-size:13px;padding:6px 10px;cursor:pointer;border-radius:8px;border:2px solid #1a1a2e;background:#f5a623;font-weight:700;font-family:inherit">Update QR</button>
     </div>
   </div>
 
