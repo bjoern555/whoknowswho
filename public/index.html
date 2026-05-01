@@ -59,7 +59,7 @@
       transition: border-color 0.1s;
     }
     .emoji-btn.selected { border-color: #1a1a2e; background: #faebd7; }
-    .emoji-btn.none-btn { font-size: 14px; color: #999; }
+    .emoji-btn.none-btn { font-size: 14px; color: #666; }
 
     #peopleList { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
     .person-btn {
@@ -67,6 +67,7 @@
       border-radius: 10px; background: white;
       cursor: pointer; font-size: 15px; font-family: inherit;
       color: #1a1a2e; font-weight: 600;
+      display: inline-flex; align-items: center;
       transition: border-color 0.1s, background 0.1s;
     }
     .person-btn:hover { border-color: #f5a623; }
@@ -75,7 +76,7 @@
       color: white; font-weight: 800;
     }
 
-    #profileLine { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    #profileLine { display: flex; align-items: center; gap: 12px; margin-bottom: 0; }
     #profileBadge {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 6px 16px; border-radius: 20px;
@@ -87,11 +88,25 @@
       border: 2px solid #1a1a2e; background: white; color: #1a1a2e;
       font-family: inherit;
     }
-    #editToggle:hover { background: #f5a623; border-color: #f5a623; }
 
     #editSection {
       background: white; border-radius: 12px; padding: 14px;
       margin: 10px 0; border: 2px solid #d4c4b0;
+    }
+
+    .photo-row { display: flex; align-items: center; gap: 14px; margin: 14px 0 4px; }
+    .photo-preview {
+      width: 60px; height: 60px; border-radius: 50%;
+      border: 3px solid #1a1a2e; object-fit: cover;
+      background: #e8d5be; display: flex; align-items: center; justify-content: center;
+      font-size: 26px; overflow: hidden; flex-shrink: 0;
+    }
+    .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-capture-btn {
+      padding: 9px 16px; font-size: 14px; font-weight: 800;
+      border: 2px solid #1a1a2e; border-radius: 10px;
+      background: #c4a8dc; color: #1a1a2e; cursor: pointer;
+      font-family: inherit;
     }
 
     #qrSection {
@@ -120,15 +135,22 @@
         oninput="document.getElementById('regDrunkVal').textContent=this.value" />
       <span id="regDrunkVal" style="font-size:22px;font-weight:900;color:#e8387a;min-width:24px">5</span>
     </div>
+
+    <div class="picker-label">Foti</div>
+    <div class="photo-row">
+      <div class="photo-preview" id="regPhotoPreview">📷</div>
+      <button type="button" class="photo-capture-btn" onclick="document.getElementById('regPhotoInput').click()">📸 Foti mache</button>
+      <input id="regPhotoInput" type="file" accept="image/*" capture="user" style="display:none" onchange="handleRegPhoto(this)" />
+    </div>
     <br>
-    <button class="primary" onclick="register()">Join &rarr;</button>
+    <button type="button" class="primary" onclick="register()">Join &rarr;</button>
   </div>
 
   <div id="mainSection" style="display:none">
     <div class="card" style="padding:14px 20px">
       <div id="profileLine">
         <span id="profileBadge"></span>
-        <button id="editToggle" onclick="toggleEdit()">✏️ Profil bearbeite</button>
+        <button type="button" id="editToggle" onclick="toggleEdit()">✏️ Profil bearbeite</button>
       </div>
 
       <div id="editSection" style="display:none">
@@ -142,8 +164,14 @@
             oninput="document.getElementById('editDrunkVal').textContent=this.value" />
           <span id="editDrunkVal" style="font-size:22px;font-weight:900;color:#e8387a;min-width:24px">5</span>
         </div>
+        <div class="picker-label">Foti</div>
+        <div class="photo-row">
+          <div class="photo-preview" id="editPhotoPreview">📷</div>
+          <button type="button" class="photo-capture-btn" onclick="document.getElementById('editPhotoInput').click()">📸 Neus Foti</button>
+          <input id="editPhotoInput" type="file" accept="image/*" capture="user" style="display:none" onchange="handleEditPhoto(this)" />
+        </div>
         <br>
-        <button class="primary" onclick="saveProfile()">Speichere</button>
+        <button type="button" class="primary" onclick="saveProfile()">Speichere</button>
       </div>
     </div>
 
@@ -151,7 +179,7 @@
       <p style="margin:0 0 12px;color:#1a1a2e;font-weight:700;font-size:14px">Klick d lüüt a wo d kennsch. Klick nomal zums lösche.</p>
       <div id="peopleList"></div>
       <br>
-      <button class="primary" onclick="viewGraph()">Gahn zum graph &rarr;</button>
+      <button type="button" class="primary" onclick="viewGraph()">Gahn zum graph &rarr;</button>
     </div>
   </div>
 
@@ -159,15 +187,15 @@
     <p>Share de QR-Code:</p>
     <div id="qrcode"></div>
     <p style="font-size:12px;color:#555;margin:6px 0 0" id="appUrl"></p>
-    <button onclick="document.getElementById('urlOverrideSection').style.display='block';this.style.display='none'" style="font-size:11px;color:#666;cursor:pointer;user-select:none;background:none;border:none;padding:4px 0;margin-top:6px;font-family:inherit">⚙ host settings</button>
+    <button type="button" onclick="document.getElementById('urlOverrideSection').style.display='block';this.style.display='none'" style="font-size:11px;color:#666;cursor:pointer;user-select:none;background:none;border:none;padding:4px 0;margin-top:6px;font-family:inherit">⚙ host settings</button>
     <div id="urlOverrideSection" style="display:none;margin-top:8px">
       <input id="urlOverride" type="text" placeholder="Paste tunnel URL (e.g. https://xxx.trycloudflare.com)" style="width:280px;font-size:13px" />
-      <button onclick="updateQR()" style="font-size:13px;padding:6px 10px;cursor:pointer;border-radius:8px;border:2px solid #1a1a2e;background:#f5a623;font-weight:700;font-family:inherit">Update QR</button>
+      <button type="button" onclick="updateQR()" style="font-size:13px;padding:6px 10px;cursor:pointer;border-radius:8px;border:2px solid #1a1a2e;background:#f5a623;font-weight:700;font-family:inherit">Update QR</button>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-  <script>
+  <script type="module">
     const PALETTE = [
       { name: 'blue',   hex: '#4a90d9' },
       { name: 'pink',   hex: '#ff69b4' },
@@ -176,30 +204,65 @@
       { name: 'red',    hex: '#e74c3c' },
       { name: 'violet', hex: '#9b59b6' },
     ]
-    const EMOJIS = ['🎉','😊','😎','🔥','💎','🌟','🍕','🎸','🦄','🐱','🚀','🌈','🍺','👑','🦊','💪','🎭','🤗']
+    const EMOJIS = ['😎','🤠','🤪','😊','🤓','🥳','🐱','🦄','🌈','🍺','👑','🔥','🌟','🤢']
 
     let myId         = localStorage.getItem('myId')
     let myName       = localStorage.getItem('myName')
     let myColor      = localStorage.getItem('myColor') || '#4a90d9'
     let myEmoji      = localStorage.getItem('myEmoji') || ''
-    let myDrunkLevel = localStorage.getItem('myDrunkLevel') !== null ? Number(localStorage.getItem('myDrunkLevel')) : 5
+    let myDrunkLevel = localStorage.getItem('myDrunkLevel') === null ? 5 : Number(localStorage.getItem('myDrunkLevel'))
+    let myPhoto      = localStorage.getItem('myPhoto') || ''
 
     let regColor = myColor
     let regEmoji = myEmoji
+    let regPhoto = myPhoto
     let editColor = myColor
     let editEmoji = myEmoji
+    let editPhoto = myPhoto
+
+    function handlePhoto(input, previewId, onPhoto) {
+      const file = input.files[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = e => {
+        const img = new Image()
+        img.onload = () => {
+          const size = 160
+          const canvas = document.createElement('canvas')
+          canvas.width = size; canvas.height = size
+          const ctx = canvas.getContext('2d')
+          const min = Math.min(img.width, img.height)
+          const sx = (img.width - min) / 2
+          const sy = (img.height - min) / 2
+          ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
+          const b64 = canvas.toDataURL('image/jpeg', 0.75)
+          onPhoto(b64)
+          const preview = document.getElementById(previewId)
+          preview.innerHTML = ''
+          const imgEl = document.createElement('img')
+          imgEl.src = b64
+          preview.appendChild(imgEl)
+        }
+        img.src = e.target.result
+      }
+      reader.readAsDataURL(file)
+    }
 
     buildPicker('regColorPicker',  'regEmojiPicker',  regColor,  regEmoji,
       c => regColor = c, e => regEmoji = e)
     buildPicker('editColorPicker', 'editEmojiPicker', myColor, myEmoji,
       c => editColor = c, e => editEmoji = e)
 
-    if (myId) void showMain()
+    if (myId) await showMain()
 
+    let qrInstance = null
     function renderQR(url) {
       document.getElementById('appUrl').textContent = url
-      document.getElementById('qrcode').innerHTML = ''
-      const _qr = new QRCode(document.getElementById('qrcode'), { text: url, width: 128, height: 128 })
+      if (qrInstance) {
+        qrInstance.makeCode(url)
+      } else {
+        qrInstance = new QRCode(document.getElementById('qrcode'), { text: url, width: 128, height: 128 })
+      }
     }
     async function updateQR() {
       const val = document.getElementById('urlOverride').value.trim()
@@ -212,9 +275,8 @@
       renderQR(val)
       document.getElementById('urlOverrideSection').style.display = 'none'
     }
-    fetch('/api/config').then(r => r.json()).then(({ publicUrl }) => {
-      renderQR(publicUrl || globalThis.location.origin)
-    })
+    const { publicUrl: initUrl } = await fetch('/api/config').then(r => r.json())
+    renderQR(initUrl || globalThis.location.origin)
 
     function buildPicker(colorId, emojiId, selColor, selEmoji, onColor, onEmoji) {
       const colorEl = document.getElementById(colorId)
@@ -233,7 +295,7 @@
 
       const emojiEl = document.getElementById(emojiId)
       const noneBtn = document.createElement('button')
-      noneBtn.className = 'emoji-btn none-btn' + (!selEmoji ? ' selected' : '')
+      noneBtn.className = 'emoji-btn none-btn' + (selEmoji ? '' : ' selected')
       noneBtn.textContent = '✕'
       noneBtn.title = 'No emoji'
       noneBtn.onclick = () => {
@@ -269,7 +331,7 @@
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, color: regColor, emoji: regEmoji, drunkLevel: Number(document.getElementById('regDrunkLevel').value) })
+        body: JSON.stringify({ name, color: regColor, emoji: regEmoji, drunkLevel: Number(document.getElementById('regDrunkLevel').value), photo: regPhoto })
       })
       const data = await res.json()
       myId         = data.id
@@ -277,11 +339,13 @@
       myColor      = data.color || regColor
       myEmoji      = data.emoji ?? regEmoji
       myDrunkLevel = Number(document.getElementById('regDrunkLevel').value)
+      myPhoto = regPhoto
       localStorage.setItem('myId',         myId)
       localStorage.setItem('myName',       myName)
       localStorage.setItem('myColor',      myColor)
       localStorage.setItem('myEmoji',      myEmoji)
       localStorage.setItem('myDrunkLevel', myDrunkLevel)
+      localStorage.setItem('myPhoto',      myPhoto)
       await showMain()
     }
 
@@ -293,14 +357,16 @@
     async function saveProfile() {
       myColor      = editColor
       myEmoji      = editEmoji
+      myPhoto      = editPhoto
       myDrunkLevel = Number(document.getElementById('editDrunkLevel').value)
       localStorage.setItem('myColor',      myColor)
       localStorage.setItem('myEmoji',      myEmoji)
       localStorage.setItem('myDrunkLevel', myDrunkLevel)
+      localStorage.setItem('myPhoto',      myPhoto)
       await fetch('/api/people/' + myId, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ color: myColor, emoji: myEmoji, drunkLevel: myDrunkLevel })
+        body: JSON.stringify({ color: myColor, emoji: myEmoji, drunkLevel: myDrunkLevel, photo: myPhoto })
       })
       updateBadge()
       document.getElementById('editSection').style.display = 'none'
@@ -313,8 +379,16 @@
 
       editColor = myColor
       editEmoji = myEmoji
+      editPhoto = myPhoto
       document.getElementById('editDrunkLevel').value = myDrunkLevel
       document.getElementById('editDrunkVal').textContent = myDrunkLevel
+      if (myPhoto) {
+        const p = document.getElementById('editPhotoPreview')
+        p.innerHTML = ''
+        const imgEl = document.createElement('img')
+        imgEl.src = myPhoto
+        p.appendChild(imgEl)
+      }
 
       const res  = await fetch('/api/people')
       const data = await res.json()
@@ -356,6 +430,14 @@
     }
 
     function viewGraph() { globalThis.location.href = '/graph.html' }
+
+    window.register      = register
+    window.toggleEdit    = toggleEdit
+    window.saveProfile   = saveProfile
+    window.viewGraph     = viewGraph
+    window.updateQR      = updateQR
+    window.handleRegPhoto  = input => handlePhoto(input, 'regPhotoPreview',  p => { regPhoto  = p })
+    window.handleEditPhoto = input => handlePhoto(input, 'editPhotoPreview', p => { editPhoto = p })
   </script>
 </body>
 </html>

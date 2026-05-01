@@ -8,12 +8,12 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: 'Arial Rounded MT Bold', 'Nunito', Arial, sans-serif; background: #a4cb6e; color: white; }
+    body { margin: 0; font-family: 'Arial Rounded MT Bold', 'Nunito', Arial, sans-serif; background: #a4cb6e; color: #1a1a2e; }
     #graph { width: 100vw; height: 100vh; }
     #info {
-      position: fixed; top: 12px; left: 12px; z-index: 10;
+      position: fixed; top: 12px; left: 12px; right: 12px; z-index: 10;
       background: #faebd7; color: #1a1a2e;
-      padding: 8px 12px; border-radius: 12px;
+      padding: 8px 14px; border-radius: 12px;
       border: 2px solid #1a1a2e;
       box-shadow: 3px 3px 0 #1a1a2e;
       font-size: 13px;
@@ -26,7 +26,6 @@
       font-size: 12px; font-weight: 800; cursor: pointer;
       font-family: inherit; white-space: nowrap;
     }
-    #qrToggle:hover { background: #f5a623; }
     #qrContent { display: none; clear: both; margin-top: 10px; text-align: left; }
     #qrContent.open { display: block; }
     #qrcode canvas, #qrcode img { border-radius: 6px; }
@@ -41,14 +40,39 @@
     }
     #stats .stat-value { font-weight: 900; font-size: 17px; color: #e8387a; }
     #tooltip {
-      display: none; position: fixed;
+      display: none; position: fixed; z-index: 15;
       background: #faebd7; color: #1a1a2e;
       border: 2px solid #1a1a2e;
       padding: 10px 14px; border-radius: 10px;
       pointer-events: none; font-size: 14px; font-weight: 700;
-      box-shadow: 2px 2px 0 #1a1a2e;
+      box-shadow: 2px 2px 0 #1a1a2e; text-align: center; min-width: 100px;
     }
     a { color: #f5a623; font-weight: 700; }
+
+    #bierBtn {
+      padding: 5px 12px; border-radius: 10px;
+      background: #f5a623; border: 2px solid #1a1a2e; color: #1a1a2e;
+      font-size: 12px; font-weight: 900; cursor: pointer;
+      font-family: inherit; white-space: nowrap;
+    }
+    #bierModal {
+      display: none; position: fixed; inset: 0; z-index: 40;
+      background: rgba(0,0,0,0.5);
+      align-items: center; justify-content: center;
+    }
+    #bierModal.open { display: flex; }
+    #bierCard {
+      background: #faebd7; border: 3px solid #1a1a2e;
+      border-radius: 20px; padding: 28px 24px; text-align: center;
+      box-shadow: 5px 5px 0 #1a1a2e; max-width: 300px; margin: 20px;
+    }
+    #bierCard p { color: #1a1a2e; font-weight: 800; font-size: 17px; line-height: 1.6; margin: 0 0 16px; }
+    #bierCard button {
+      padding: 10px 24px; border-radius: 12px;
+      border: 2px solid #1a1a2e; background: #e8387a; color: white;
+      font-size: 15px; font-weight: 900; cursor: pointer; font-family: inherit;
+      box-shadow: 2px 2px 0 #1a1a2e;
+    }
 
     #chatBtn {
       position: fixed; bottom: 24px; right: 24px; z-index: 20;
@@ -120,9 +144,12 @@
   <div id="info">
     <strong>🌸 Wer kennt wen (WG Edition) 🌸</strong><br>
     <small>Klick uf eppert für meh infos</small><br>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;flex-wrap:wrap">
       <a href="/">&#x2190; Zrug zum profil</a>
-      <button id="qrToggle" onclick="toggleQR()">QR ▼</button>
+      <div style="display:flex;gap:6px">
+        <button type="button" id="bierBtn" onclick="document.getElementById('bierModal').classList.add('open')">🍺 Bier bstelle</button>
+        <button type="button" id="qrToggle" onclick="toggleQR()">QR ▼</button>
+      </div>
     </div>
     <div id="qrContent">
       <div id="qrcode"></div>
@@ -133,40 +160,48 @@
   <div id="stats">
     <div><span class="stat-value" id="statPeople">0</span> lüüt</div>
     <div><span class="stat-value" id="statConnections">0</span> connections</div>
-    <div><span class="stat-value" id="statDrunk">-</span> /10 trinke 🍺</div>
+    <div><span class="stat-value" id="statDrunk">-</span> /10 betrunke</div>
     <div id="statTop" style="color:#666;font-size:11px;font-weight:700"></div>
   </div>
   <div id="graph"></div>
 
-  <button id="chatBtn" onclick="toggleChat()">
+  <div id="bierModal" role="dialog" aria-modal="true" onclick="this.classList.remove('open')" onkeydown="if(event.key==='Escape')this.classList.remove('open')">
+    <div id="bierCard" onclick="event.stopPropagation()">
+      <p>Hol mal selber!😡</p>
+      <p>Es sett bier uf em balkon und i de badwanne ha:)</p>
+      <button type="button" onclick="document.getElementById('bierModal').classList.remove('open')">👍</button>
+    </div>
+  </div>
+
+  <button type="button" id="chatBtn" onclick="toggleChat()">
     💬
     <span id="chatBadge"></span>
   </button>
   <div id="chatPanel">
     <div id="chatHeader">
-      <button id="chatBack" onclick="toggleChat()">&#x2190;</button>
+      <button type="button" id="chatBack" onclick="toggleChat()">&#x2190;</button>
       💬 Chat
     </div>
     <div id="chatMessages"></div>
     <div id="chatInputRow">
       <input id="chatText" placeholder="Nachricht…" maxlength="500" />
-      <button id="chatSendBtn" onclick="sendMessage()">&#x2192;</button>
+      <button type="button" id="chatSendBtn" onclick="sendMessage()">&#x2192;</button>
     </div>
   </div>
 
-  <script>
+  <script type="module">
     function toggleQR() {
       const content = document.getElementById('qrContent')
       const btn = document.getElementById('qrToggle')
       const open = content.classList.toggle('open')
-      btn.textContent = open ? 'QR code ▲' : 'QR code ▼'
+      btn.textContent = open ? 'QR ▲' : 'QR ▼'
     }
 
-    fetch('/api/config').then(r => r.json()).then(({ publicUrl }) => {
-      const url = publicUrl || globalThis.location.origin
-      const _qr = new QRCode(document.getElementById('qrcode'), { text: url, width: 160, height: 160 })
-      document.getElementById('qrUrl').textContent = url
-    })
+    const { publicUrl: cfgUrl } = await fetch('/api/config').then(r => r.json())
+    const qrUrl = cfgUrl || globalThis.location.origin
+    const qrInstance = new QRCode(document.getElementById('qrcode'), { text: qrUrl, width: 160, height: 160 })
+    qrInstance.makeCode(qrUrl)
+    document.getElementById('qrUrl').textContent = qrUrl
 
     const myId = localStorage.getItem('myId')
     let chatOpen = false
@@ -183,8 +218,8 @@
     }
 
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', () => { if (chatOpen) { setChatSize(); scrollChatToBottom() } })
-      window.visualViewport.addEventListener('scroll', () => { if (chatOpen) setChatSize() })
+      window.visualViewport.addEventListener('resize', () => { if (chatOpen) { setChatSize(); scrollChatToBottom() } }, { passive: true })
+      window.visualViewport.addEventListener('scroll', () => { if (chatOpen) setChatSize() }, { passive: true })
     }
 
     function toggleChat() {
@@ -288,7 +323,7 @@
     }
 
     setInterval(() => { void pollMessages() }, 3000)
-    void pollMessages()
+    await pollMessages()
 
     function buildGraphData(people) {
       const connectionCount = {}
@@ -361,7 +396,7 @@
         }, people[0])
         if (top) {
           const label = (top.emoji ? top.emoji + ' ' : '') + top.name
-          document.getElementById('statTop').textContent = '🌸 most connected: ' + label
+          document.getElementById('statTop').textContent = 'Most connected: ' + label
         }
       }
 
@@ -388,10 +423,16 @@
         const count = currentPeople.filter(p =>
           p.id !== nodeId && (person.knows.includes(p.id) || p.knows.includes(nodeId))
         ).length
+        const photoHtml = person.photo ? `<img src="${person.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 8px;border:2px solid #1a1a2e">` : ''
+        tooltip.innerHTML = `${photoHtml}<strong>${person.name}</strong>${person.drunkLevel == null ? '' : '<br>🍻 ' + person.drunkLevel + '/10'}<br>${count} connection${count === 1 ? '' : 's'}`
         tooltip.style.display = 'block'
-        tooltip.style.left = params.event.srcEvent.clientX + 15 + 'px'
-        tooltip.style.top = params.event.srcEvent.clientY + 15 + 'px'
-        tooltip.innerHTML = `<strong>${person.name}</strong>${person.drunkLevel != null ? '<br>🍻 ' + person.drunkLevel + '/10' : ''}<br>${count} connection${count !== 1 ? 's' : ''}`
+        const cx = params.event.srcEvent.clientX
+        const cy = params.event.srcEvent.clientY
+        const rect = tooltip.getBoundingClientRect()
+        const x = cx + 15 + rect.width > window.innerWidth ? cx - rect.width - 10 : cx + 15
+        const y = cy + 15 + rect.height > window.innerHeight ? cy - rect.height - 10 : cy + 15
+        tooltip.style.left = x + 'px'
+        tooltip.style.top = y + 'px'
       })
 
       setInterval(async () => {
@@ -424,7 +465,11 @@
       }, 5000)
     }
 
-    void init()
+    await init()
+
+    window.toggleQR = toggleQR
+    window.toggleChat = toggleChat
+    window.sendMessage = sendMessage
   </script>
 </body>
 </html>
